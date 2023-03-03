@@ -1,12 +1,14 @@
 /// <reference types="cypress" />
 
-interface TockFixture {
+interface Target {
 	reservation: string,
-	partySize: number
+	partySize: number,
+	timePreferences: string[]
 }
 
-const fixtureId = Cypress.env('fixture')
-const fixture: TockFixture = require(`../fixtures/${fixtureId}.json`)
+const targetId = Cypress.env('target')
+const target: Target = require(`../fixtures/${targetId}.json`)
+const patron = require('../fixtures/patron.json')
 
 const tid = (id:string, eq:string = '=') => `[data-testid${eq}${id}]`
 
@@ -16,11 +18,11 @@ function addGuestsUntilEqualTo(partySize:number) {
 			.get(tid('guest-selector-text') + ' p')
 			.last().then((textNode) => {
 				const numberOfGuests = parseInt(textNode.text(), 10)
-				if (numberOfGuests === fixture.partySize) {
+				if (numberOfGuests === target.partySize) {
 					resolve(textNode);
 					return
 				}
-				const slector = numberOfGuests > fixture.partySize 
+				const slector = numberOfGuests > target.partySize 
 					? 'guest-selector_minus'
 					: 'guest-selector_plus'
 					;
@@ -37,20 +39,74 @@ function closeTrusteModal() {
 		cy.get('body').then((body) => {
 			const rejectAllCookies = body.find('#truste-consent-required')
 			if (rejectAllCookies.length > 0) 
-				cy.get('#truste-consent-required').click().then(resolve)
+				cy.wrap(rejectAllCookies).click().then(resolve)
 			else 
 				resolve(body) 
 		})
 	})
 }
 
-describe(fixtureId, () => {
-	it('attempt booking', async () => {
-		cy.visit(`https://exploretock.com/${fixtureId}`)
-		closeTrusteModal()
-		cy.get(tid('offering-link', '*='))
-			.contains(fixture.reservation)
+function openBookingModal() {
+	cy.get(tid('offering-link', '*='))
+			.contains(target.reservation)
 			.click()
-		addGuestsUntilEqualTo(fixture.partySize)
+}
+
+function fetchAvailableDays(): Promise<JQuery> {
+	return new Cypress.Promise((resolve, reject) => {
+		cy.get(tid('consumer-calendar-day')).then((days) => {
+			resolve(days.filter('[aria-disabled=false].is-available'))
+		})
+	})
+}
+
+function findFirstPreferredTime(days:Array<HTMLElement>) {
+	return new Cypress.Promise((resolve, reject) => {
+		if (days.length === 0) {
+			reject(new Error('unable to find any available timeslots matching preferences'))
+			return
+		}
+		cy.wrap(days[0]).click()
+		cy.get(tid('search-result-list-item')).then((results) => {
+			cy.log(`searching ${results.length} available slots on ${days[0].ariaLabel} for preference...`)
+			const matchedPreferences = results
+				.filter((i, el) => 
+					target.timePreferences.indexOf(el.innerText) >= 0)
+			if (matchedPreferences.length === 0) {
+				findFirstPreferredTime(days.slice(1)).then(resolve)
+			} else {
+				resolve(Cypress.$([days[0], matchedPreferences[0]]))
+			}
+		})
+	})
+}
+
+function authenticate() {
+	cy.visit(`https://www.exploretock.com/login?continue=%2F${targetId}`)
+	cy.get(tid('email-input')).type(patron.email)
+	cy.get(tid('email-password')).type(patron.password)
+	cy.get(tid('sign-in')).click()
+}
+
+function checkOut(timeSlot:HTMLElement) {
+	return new Cypress.Promise((resolve, reject) => {
+		cy.wrap(timeSlot).click()
+		cy.get(tid('credit-card-form'))
+	})
+}
+
+describe(targetId, () => {
+	it('attempt booking', async () => {
+		authenticate()
+		closeTrusteModal()
+		openBookingModal()
+		addGuestsUntilEqualTo(target.partySize)
+		fetchAvailableDays().then((days) => {
+			cy.log(`found ${days.length} days available to book...`)
+			return findFirstPreferredTime(Array.from(days))
+		}).then((match) => {
+			cy.log(`found match for preference: ${match[0].ariaLabel} @ ${match[1].innerText}`)
+			return checkOut(match[1])
+		})
 	})
 })

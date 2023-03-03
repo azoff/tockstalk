@@ -1,2 +1,2 @@
-cypress/e2e/_examples
+cypress/fixtures/patron.json
 node_modules
