@@ -1,2 +1,2 @@
-cypress/fixtures/patron.json
+cypress.env.json
 node_modules

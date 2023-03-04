@@ -4,7 +4,7 @@
   "description": "A tock reserving bot",
   "scripts": {
     "start": "cypress open --e2e",
-    "test": "cypress run --e2e"
+    "test": "CYPRESS_NO_COMMAND_LOG=1 cypress run --e2e"
   },
   "repository": {
     "type": "git",
