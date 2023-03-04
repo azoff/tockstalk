@@ -84,6 +84,7 @@ describe('book reservation', () => {
 			cy.log(`searching ${results.length} available slots on ${days[0].ariaLabel} for preference...`)
 			const matchedPreferences = results
 				.filter((i, el) => 
+					reservation.timePreferences.length === 0 ||
 					reservation.timePreferences.indexOf(el.innerText) >= 0)
 			if (matchedPreferences.length === 0) {
 				return findFirstPreferredTime(days.slice(1))
