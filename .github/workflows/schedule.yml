@@ -2,6 +2,11 @@ name: Scheduled Jobs
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'the config to use for the Cypress environment'
+        required: false
+        default: 'sushi'
   schedule:
     - cron: "0/15 * * * *" # every 15 minutes
 
@@ -11,6 +16,7 @@ jobs:
   attempt_booking:
     name: Attempt Booking
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'sushi' }}
     steps:
       - uses: actions/checkout@v3
       - uses: Mercymeilya/last-workflow-status@v0.3.3
