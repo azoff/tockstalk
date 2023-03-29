@@ -142,7 +142,7 @@ describe('book reservation', () => {
 	after(() => {
 		if (confirmation) cy.log({
 			color: 'good',
-			text: `:calendar: reservation booked: ${confirmation}`
+			text: `:calendar: <!channel> booked! ${confirmation}`
 		} as unknown as string)
 		else cy.log({
 			color: 'danger',
