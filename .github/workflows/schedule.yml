@@ -1,6 +1,7 @@
 name: Scheduled Jobs
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0/15 * * * *" # every 15 minutes
 
@@ -22,6 +23,8 @@ jobs:
           node-version-file: .node-version
           cache: npm
           cache-dependency-path: package-lock.json
+      - run: echo '${{ secrets.CYPRESS_ENV }}' > cypress.env.json
+        if: steps.last_status.outputs.last_status != 'success'
       - run: npm ci
         if: steps.last_status.outputs.last_status != 'success'
       - run: npm test
