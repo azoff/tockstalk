@@ -2,6 +2,8 @@
 
 A [Cypress](https://docs.cypress.io/guides/overview/why-cypress) bot to book restaurants on [Tock](exploretock.com) and report attempts to [Slack](https://slack.com).
 
+![image](https://user-images.githubusercontent.com/160452/228456537-70800008-5975-4ecd-9fed-a182eaec2313.png)
+
 ## Prerequisites
 
 Ensure your computer has `node` and `npm` installed. You can use [nodenv](https://github.com/nodenv/nodenv#installation) if you don't. Once installed,
@@ -39,7 +41,7 @@ echo '
 	"partySize": 4,
 	"desiredTimeSlots": [ "11:00 AM" ],
 	"excludedDays": [ "2023-03-29" ],
-	"slackWebhookUrl": "https://hooks.slack.com/services/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",
+	"slackWebhookUrl": "https://hooks.slack.com/services/00000000000/00000000000/00000000000000000000000",
 	"slackUsername": "Otium Grill and Greens",
 	"slackIconEmoji": ":meat_on_bone:",
 	"dryRun": true
@@ -50,6 +52,8 @@ echo '
 The fields are all pretty self explanatory, though you can use `dryRun` to avoid actually booking if you just want to test the whole thing out.
 
 ## Scheduling
+
+![image](https://user-images.githubusercontent.com/160452/228456115-a510e933-29be-4c65-aad9-bf01aab9a213.png)
 
 A lot of restaurants set their next month's schedule on a particular day and time. You can use github actions to 
 [schedule jobs on a cron](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule) and try to snag a spot as things
