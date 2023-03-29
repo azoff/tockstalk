@@ -1,0 +1,30 @@
+name: Scheduled Jobs
+
+on:
+  schedule:
+    - cron: "0/15 * * * *" # every 15 minutes
+
+jobs:
+
+  # attempts a booking on Tock, but only if it hasn't previously succeeded
+  attempt_booking:
+    name: Attempt Booking
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Mercymeilya/last-workflow-status@v0.3.3
+        id: last_status
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v3
+        if: steps.last_status.outputs.last_status != 'success'
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+        if: steps.last_status.outputs.last_status != 'success'
+      - run: npm test
+        if: steps.last_status.outputs.last_status != 'success'
+      - uses: gautamkrishnar/keepalive-workflow@v1 # because github will kill this after 60 days
+    

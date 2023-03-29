@@ -5,6 +5,7 @@ interface Reservation {
 	partySize: number
 	desiredTimeSlots: string[]
 	excludedDays: string[]
+	dryRun: boolean
 }
 
 interface Patron {
@@ -37,9 +38,11 @@ describe('book reservation', () => {
 			bookingPage: Cypress.env('bookingPage'),
 			desiredTimeSlots: Cypress.env('desiredTimeSlots'),
 			excludedDays: Cypress.env('excludedDays'),
+			dryRun: Cypress.env('dryRun'),
 		}
 		cy.wrap(reservation.bookingPage).should('be.ok')
 		cy.wrap(reservation.partySize).should('be.a', 'number')
+		cy.wrap(reservation.dryRun).should('be.a', 'boolean')
 		cy.wrap(reservation.desiredTimeSlots).should('be.a', 'array')
 		cy.wrap(reservation.excludedDays).should('be.a', 'array')
 	})
@@ -122,10 +125,14 @@ describe('book reservation', () => {
 
 	function submitBooking() {
 		cy.log(':handshake: booking reservation...')
-		// cy.get('[data-testid="submit-purchase-button"]').click()
-		return cy.get('.Receipt-container--header p').then(p => {
-			return cy.wrap(p.text())
-		})
+		if (reservation.dryRun) {
+			return cy.wrap('Dry Run (no reservation booked)')
+		} else {		
+			cy.get('[data-testid="submit-purchase-button"]').click()
+			return cy.get('.Receipt-container--header p').then(p => {
+				return cy.wrap(p.text())
+			})
+		}
 	}
 
 	let confirmation: string
