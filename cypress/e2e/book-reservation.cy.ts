@@ -1,17 +1,22 @@
 /// <reference types="cypress" />
 
 interface Reservation {
-	slug: string,
-	offering: string,
-	partySize: number,
-	timePreferences: string[]
+	bookingPage: string
+	partySize: number
+	desiredTimeSlots: string[]
+	excludedDays: string[]
 }
 
 interface Patron {
-	email: string,
-	password: string,
+	email: string
+	password: string
 	cvv: number
 }
+
+interface Booking {
+	day: string
+	time: string
+} 
 
 describe('book reservation', () => {
 	
@@ -28,121 +33,127 @@ describe('book reservation', () => {
 		cy.wrap(patron.password).should('be.ok')
 		cy.wrap(patron.cvv).should('be.a', 'number')
 		reservation = {
-			offering: Cypress.env('offering'),
 			partySize: Cypress.env('partySize'),
-			slug: Cypress.env('slug'),
-			timePreferences: Cypress.env('timePreferences')
+			bookingPage: Cypress.env('bookingPage'),
+			desiredTimeSlots: Cypress.env('desiredTimeSlots'),
+			excludedDays: Cypress.env('excludedDays'),
 		}
-		cy.wrap(reservation.slug).should('be.ok')
-		cy.wrap(reservation.offering).should('be.ok')
+		cy.wrap(reservation.bookingPage).should('be.ok')
 		cy.wrap(reservation.partySize).should('be.a', 'number')
-		cy.wrap(reservation.timePreferences).should('be.a', 'array')
+		cy.wrap(reservation.desiredTimeSlots).should('be.a', 'array')
+		cy.wrap(reservation.excludedDays).should('be.a', 'array')
 	})
 
 	const tid = (id:string, eq:string = '=') => `[data-testid${eq}${id}]`
 
-	function addGuestsUntilEqualTo(partySize:number) {
-		return cy
-			.get(tid('experience-dialog-content'))
-			.find(tid('guest-selector-text') + ' p')
-			.last().then((textNode) => {
-					const numberOfGuests = parseInt(textNode.text(), 10)
-					if (numberOfGuests === reservation.partySize)
-						return textNode
-					const slector = numberOfGuests > reservation.partySize 
-						? 'guest-selector_minus'
-						: 'guest-selector_plus'
-						;
-						cy.get(tid(slector)).last().click()
-						// recurse until party size is reached (or fails)
-						return addGuestsUntilEqualTo(partySize)
-			})
-	}
-
 	function closeTrusteModal() {
-		return cy
-			.get('#truste-consent-required')
-			.click() 
-	}
-
-	function openBookingModal() {
-		cy.get(tid('offering-link', '*='))
-				.contains(reservation.offering)
-				.click()
+		// NOTE: Enable if in europe
+		// cy.log(':cookie: closing truste modal...')
+		// return cy
+		// 	.get('#truste-consent-required')
+		// 	.click() 
 	}
 
 	function fetchAvailableDays() {
+		cy.log(':mag: checking for days with openings...')
 		return cy
 			.get(tid('consumer-calendar-day'))
 			.filter('[aria-disabled=false].is-available')
+			.then((days) => cy.wrap(
+				days.filter((i, el) => 
+					reservation.excludedDays.length === 0 ||
+					reservation.excludedDays.indexOf(el.ariaLabel) < 0)
+			))
 	}
 
-	function findFirstPreferredTime(days:Array<HTMLElement>) {
+	function findMatchingTimeSlot(days:Array<HTMLElement>) {
 		cy.wrap(days.length).should('be.greaterThan', 0) 
 		cy.wrap(days[0]).click()
 		return cy.get(tid('search-result-time')).then((results) => {
-			cy.log(`searching ${results.length} available slots on ${days[0].ariaLabel} for preference...`)
+			cy.log(`:crossed_fingers: checking ${results.length} slots on ${days[0].ariaLabel} for a match...`)
 			const matchedPreferences = results
 				.filter((i, el) => 
-					reservation.timePreferences.length === 0 ||
-					reservation.timePreferences.indexOf(el.innerText) >= 0)
+					reservation.desiredTimeSlots.length === 0 ||
+					reservation.desiredTimeSlots.indexOf(el.innerText) >= 0)
 			if (matchedPreferences.length === 0) {
-				return findFirstPreferredTime(days.slice(1))
+				return findMatchingTimeSlot(days.slice(1))
 			} else {
-				return cy.wrap(Cypress.$([days[0], matchedPreferences[0]]))
+				return cy.wrap({
+					booking: {
+						day: days[0].ariaLabel,
+						time: matchedPreferences[0].innerText
+					},
+					timeSlot: matchedPreferences[0]
+				})
 			}
 		})
 	}
 
 	function authenticate() {
+		cy.log(':unlock: logging in...')
 		cy.get(tid('email-input')).type(patron.email)
 		cy.get(tid('password-input')).type(patron.password)
 		cy.get(tid('signin')).click()
 	}
 
 	function visit() {
-		cy.visit(`https://www.exploretock.com/login?continue=%2F${reservation.slug}`)
+		cy.log(':house: visiting booking page...')
+		const redirect = encodeURIComponent(`${reservation.bookingPage}?size=${reservation.partySize}`)
+		cy.visit(`https://www.exploretock.com/login?continue=${redirect}`)
 		closeTrusteModal()
 	}
 
 	function fillFormFields(timeSlot:HTMLElement) {
-		cy.wrap(timeSlot).click()
+		cy.wrap(timeSlot).click()		
 		return cy.get('body').then((body) => {
 			const root = body.find('span#cvv')
 			if (root.length) {
+				cy.log(':credit_card: completing payment form...')
 				cy.intercept('https://payments.braintree-api.com/graphql').as('braintree')
 				cy.wait('@braintree')
-				return cy
-					.get('iframe[type=cvv]')
+				cy.get('iframe[type=cvv]')
 					.its('0.contentDocument.body')
 					.find('#cvv')
 					.type(patron.cvv.toString())
-			} else {
-				return cy.wrap(null)
 			}
+			return cy.wrap(root.length > 0)
 		})
 	}
 
 	function submitBooking() {
-		cy.log('booking reservation...')
-		cy.get('[data-testid="submit-purchase-button"]').click()
-		cy.get('.Receipt-container--header p').then(p => {
-			cy.log(`reservation booked! ${p.text()}`)
+		cy.log(':handshake: booking reservation...')
+		// cy.get('[data-testid="submit-purchase-button"]').click()
+		return cy.get('.Receipt-container--header p').then(p => {
+			return cy.wrap(p.text())
 		})
 	}
 
-	it('for first available time preference', async () => {
+	let confirmation: string
+
+	after(() => {
+		if (confirmation) cy.log({
+			color: 'good',
+			text: `:calendar: reservation booked: ${confirmation}`
+		} as unknown as string)
+		else cy.log({
+			color: 'danger',
+			text: ':cry: no reservation booked'
+		} as unknown as string)
+	})
+
+	it('for first available time preference', () => {
+		confirmation = ''
 		visit()
 		authenticate()
-		openBookingModal()
-		addGuestsUntilEqualTo(reservation.partySize)
 		fetchAvailableDays().then((days) => {
-			cy.log(`found ${days.length} days available to book...`)
-			return findFirstPreferredTime(Array.from(days))
-		}).then((match) => {
-			cy.log(`found match for preference: ${match[0].ariaLabel} @ ${match[1].innerText}`)
-			return fillFormFields(match[1])
+			cy.log(`:raised_hands: found ${days.length} days available for booking...`)
+			return findMatchingTimeSlot(Array.from(days))
+		}).then(({ booking, timeSlot }) => {
+			cy.log(`:white_check_mark: found time slot for ${booking.day} @ ${booking.time}...`)
+			return fillFormFields(timeSlot)
 		})
-		submitBooking()
+		submitBooking().then((msg) => {
+			confirmation = msg
+		})
 	})
 })
