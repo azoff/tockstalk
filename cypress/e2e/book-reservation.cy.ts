@@ -93,21 +93,21 @@ describe('book reservation', () => {
 	}
 
 	function authenticate() {
-		cy.log(':unlock: logging in...')
+		cy.log(':house: navigating to booking page...')
 		cy.get(tid('email-input')).type(patron.email)
 		cy.get(tid('password-input')).type(patron.password)
+		cy.log(':unlock: logging in...')
 		cy.get(tid('signin')).click()
 	}
 
 	function visit() {
-		cy.log(':house: visiting booking page...')
 		const redirect = encodeURIComponent(`${reservation.bookingPage}?size=${reservation.partySize}`)
 		cy.visit(`https://www.exploretock.com/login?continue=${redirect}`)
 		closeTrusteModal()
 	}
 
 	function fillFormFields(timeSlot:HTMLElement) {
-		cy.wrap(timeSlot).click()		
+		cy.wrap(timeSlot).click()
 		return cy.get('body').then((body) => {
 			const root = body.find('span#cvv')
 			if (root.length) {
