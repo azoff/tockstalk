@@ -108,7 +108,7 @@ describe('book reservation', () => {
 
 	function fillFormFields(timeSlot:HTMLElement) {
 		cy.wrap(timeSlot).click()
-		return cy.get('body').then((body) => {
+		return cy.get('.Consumer-contentContainer').then((body) => {
 			const root = body.find('span#cvv')
 			if (root.length) {
 				cy.log(':credit_card: completing payment form...')
@@ -118,6 +118,8 @@ describe('book reservation', () => {
 					.its('0.contentDocument.body')
 					.find('#cvv')
 					.type(patron.cvv.toString())
+			} else {
+				cy.log(':money_with_wings: no deposit required...')	
 			}
 			return cy.wrap(root.length > 0)
 		})
@@ -129,7 +131,7 @@ describe('book reservation', () => {
 			return cy.wrap('Dry Run (no reservation booked)')
 		} else {		
 			cy.get('[data-testid="submit-purchase-button"]').click()
-			return cy.get('.Receipt-container--header p').then(p => {
+			return cy.get('.Receipt-container--header p', { timeout: 10000 }).then(p => {
 				return cy.wrap(p.text())
 			})
 		}

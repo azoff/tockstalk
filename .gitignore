@@ -2,3 +2,4 @@ cypress.env*.json
 !cypress.env.example.json
 node_modules
 cypress/videos
+cypress/screenshots
