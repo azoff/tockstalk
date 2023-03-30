@@ -2,7 +2,7 @@
 
 A [Cypress](https://docs.cypress.io/guides/overview/why-cypress) bot to book restaurants on [Tock](exploretock.com) and report attempts to [Slack](https://slack.com).
 
-![image](https://user-images.githubusercontent.com/160452/228456537-70800008-5975-4ecd-9fed-a182eaec2313.png)
+![image](https://user-images.githubusercontent.com/160452/228733212-c30c234a-ee89-4167-8b30-b7a2edac4c91.png)
 
 ## Prerequisites
 
